@@ -1,0 +1,71 @@
+body {
+    background-color: rgb(41,43,46);
+    font-family: "Trebuchet MS", Helvetica, sans-serif;
+    color: lightgrey;
+}
+
+.panel {
+    width: 100%;
+}
+
+.clock {
+    font-size: 128px;
+    margin: 0 auto;
+    width: 500px;
+}
+
+.button {
+    font-size: 300%;
+    float: left;
+}
+
+.stop {
+    float: right;
+}
+
+.button:hover {
+    color: rgb(102,136,173);
+    cursor: pointer;
+}
+
+.buttons {
+    margin: 0 auto;
+    width: 500px;
+}
+
+button {
+    margin: 5px;
+    min-width: 100px;
+    padding: 10px;
+}
+
+.login-form {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    position: fixed;
+    width: 300px;
+}
+
+#username,
+#password {
+    background-color: rgb(41,43,46);
+    border: 2px solid rgb(102,136,173);
+    border-radius: 5px;
+    color: lightgrey;
+    float: left;
+    height: 25px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    padding: 5px;
+    width: 300px;
+}
+
+.login-form .button {
+    margin-left: 50%;
+    transform: translate(-50%,0);
+}
+
+.error {
+    color: rgb(231, 75, 75);
+}

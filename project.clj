@@ -35,7 +35,9 @@
                  [ring/ring-core "1.6.2"]
                  [ring/ring-defaults "0.3.1"]
                  [secretary "1.2.3"]
-                 [selmer "1.11.1"]]
+                 [selmer "1.11.1"]
+                 [com.andrewmcveigh/cljs-time "0.5.0"]
+                 [cljsjs/chartjs "2.6.0-0"]]
 
   :min-lein-version "2.0.0"
 
