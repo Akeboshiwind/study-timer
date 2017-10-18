@@ -87,13 +87,39 @@
                 :data logs
                 :borderColor ["rgba(102,136,173,1)"]}]])
 
+(defn login-failure
+  [message]
+  [:div.error-flash
+   (str message " ")
+   [:a
+    {:on-click #(dispatch [:set-current-panel :login])}
+    "LOGIN"]
+   " or "
+   [:a
+    {:on-click #(dispatch [:set-current-panel :register])}
+    "REGISTER"]])
+
+(defn error-display
+  [details]
+  (when-not (nil? details)
+    (let [[type message] details]
+      (condp = type
+        :login-failure [login-failure message]
+        [:div.error (str message)]))))
+
 (defn clock-panel
   []
   (let [state (subscribe [:clock-state])
         time (subscribe [:clock])
-        logs (subscribe [:study-log])]
+        logs (subscribe [:study-log])
+        error (subscribe [:error])]
     (fn []
       [:div.panel
+       [error-display @error]
+       [:div
+        {:on-click (fn []
+                     (dispatch [:logout]))}
+        "LOGOUT"]
        [clock @time]
        [buttons @state]
        [study-log-chart @logs]])))
@@ -104,22 +130,13 @@
       (.getElementById id)
       (.-value)))
 
-(defn form-input
-  [id type])
-
-(defn error-display
-  [[panel message]]
-  [:div.error
-   message])
-
 (defn login-panel
-  [error]
+  []
   [:div.login-form
-   [error-display error]
-   [:input#username
+   [:input#username.input
     {:placeholder "USERNAME"
      :type "text"}]
-   [:input#password
+   [:input#password.input
     {:placeholder "PASSWORD"
      :type "password"
      :on-key-press (fn [e]
@@ -132,13 +149,54 @@
                  (let [username (input-value "username")
                        password (input-value "password")]
                    (dispatch [:login username password])))}
-    "LOGIN"]])
+    "LOGIN"]
+   [:div
+    "OR"
+    [:div.button
+     {:on-click (fn []
+                  (dispatch [:set-current-panel :register]))}
+     "REGISTER"]]])
+
+(defn registration-panel
+  []
+  (let [error (subscribe [:error])]
+    [:div.login-form
+     [error-display @error]
+     [:input#username.input
+      {:placeholder "USERNAME"
+       :type "text"}]
+     [:input#password.input
+      {:placeholder "PASSWORD"
+       :type "password"}]
+     [:input#password2.input
+      {:placeholder "RE-ENTER PASSWORD"
+       :type "password"
+       :on-key-press (fn [e]
+                       (when (= 13 (.-charCode e))
+                         (.. js/document
+                             (getElementById "register-button")
+                             (click))))}]
+     [:div#register-button.button
+      {:on-click (fn []
+                   (let [username (input-value "username")
+                         password (input-value "password")
+                         password2 (input-value "password2")]
+                     (if (= password password2)
+                       (dispatch [:register username password])
+                       (dispatch [:error :register-password-mismatch "Passwords don't match"]))))}
+      "REGISTER"]
+     [:div
+      "OR"
+      [:div.button
+       {:on-click (fn []
+                    (dispatch [:set-current-panel :login]))}
+       "LOGIN"]]]))
 
 (defn main-panel
   []
-  (let [current (subscribe [:current-panel])
-        error (subscribe [:error])]
+  (let [current (subscribe [:current-panel])]
     (fn []
       (condp = @current
-        :login [login-panel @error]
-        :clock [clock-panel @error]))))
+        :login [login-panel]
+        :register [registration-panel]
+        :clock [clock-panel]))))

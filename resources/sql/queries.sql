@@ -1,4 +1,4 @@
--- :name create-user! :! :n
+-- :name create-user! :i!
 -- :doc creates a new user record
 insert
 into `user`
@@ -12,10 +12,16 @@ set username = :username, hash = :hash
 where id = :id
 
 -- :name get-user :? :1
+-- :doc retrieve a user given the id
+select *
+from `user`
+where id = :id
+
+-- :name get-user-by-username :? :1
 -- :doc retrieve a user given the username
 select *
 from `user`
-where username = username
+where username = :username
 
 -- :name delete-user! :! :n
 -- :doc delete a user given the id
@@ -35,3 +41,4 @@ values (:user-id, :time)
 select `time`
 from `time`
 where user_id = :user-id
+order by id

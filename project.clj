@@ -37,7 +37,8 @@
                  [secretary "1.2.3"]
                  [selmer "1.11.1"]
                  [com.andrewmcveigh/cljs-time "0.5.0"]
-                 [cljsjs/chartjs "2.6.0-0"]]
+                 [cljsjs/chartjs "2.6.0-0"]
+                 [day8.re-frame/http-fx "0.1.4"]]
 
   :min-lein-version "2.0.0"
 
@@ -52,7 +53,8 @@
   :plugins [[lein-cprop "1.0.3"]
             [migratus-lein "0.5.2"]
             [lein-cljsbuild "1.1.5"]
-            [lein-immutant "2.1.0"]]
+            [lein-immutant "2.1.0"]
+            [cider/cider-nrepl "0.15.1"]]
   :clean-targets ^{:protect false}
   [:target-path [:cljsbuild :builds :app :compiler :output-dir] [:cljsbuild :builds :app :compiler :output-to]]
   :figwheel
@@ -100,7 +102,7 @@
                   {:builds
                    {:app
                     {:source-paths ["src/cljs" "src/cljc" "env/dev/cljs"]
-                     :figwheel {:on-jsload "study-timer.core/mount-components"}
+                     :figwheel {:on-jsload "study-timer.core/mount-root"}
                      :compiler
                      {:main "study-timer.app"
                       :asset-path "/js/out"

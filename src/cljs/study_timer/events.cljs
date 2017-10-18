@@ -3,7 +3,9 @@
             [study-timer.db :as db]
             [cljs.spec.alpha :as s]
             [study-timer.utils :as u]
-            [study-timer.effects :as e]))
+            [study-timer.effects :as e]
+            [day8.re-frame.http-fx]
+            [ajax.core :as ajax]))
 
 (defn check-and-throw
   "Throws an exception if `db` doesn't match the Spec `a-spec`."
@@ -39,16 +41,36 @@
       {:db (assoc db :clock-state new-state
                   :time time
                   :display-time 0)}
-      (if (= :study (:clock-state db))
+      (when (= :study (:clock-state db))
         {:dispatch [:add-study-time (:display-time db)]})))))
 
-(rf/reg-event-db
+(rf/reg-event-fx
  :add-study-time
  [check-spec-interceptor
   rf/trim-v]
- (fn [db [time]]
-   (let [log (:study-log db)]
-     (assoc db :study-log (conj log time)))))
+ (fn [cofx [time]]
+   (let [db (:db cofx)
+         log (:study-log db)]
+     (merge {:db (assoc db :study-log (conj log time))}
+            (when (:logged-in? db)
+              {:http-xhrio (u/post-request "/api/v1/time/add"
+                                           {:time time}
+                                           [:add-time-success]
+                                           [:add-time-failure])})))))
+
+(rf/reg-event-db
+ :add-time-success
+ [check-spec-interceptor
+  rf/trim-v]
+ (fn [db [{:keys [response]}]]
+   (assoc db :error nil)))
+
+(rf/reg-event-fx
+ :add-time-failure
+ [check-spec-interceptor
+  rf/trim-v]
+ (fn [cofx [{:keys [response]}]]
+   {:dispatch [:error :add-time-failure (:message response)]}))
 
 (rf/reg-event-fx
  :tick
@@ -73,22 +95,100 @@
  [check-spec-interceptor
   rf/trim-v]
  (fn [db [new-panel]]
-   (assoc db :current-panel new-panel)))
+   (assoc db :current-panel new-panel
+          :error nil
+          :clock-state :stopped)))
 
 (rf/reg-event-fx
  :login
  [check-spec-interceptor
   rf/trim-v]
  (fn [cofx [username password]]
-   (merge {}
-          (if (and (= username "ake")
-                   (= password "password"))
-            {:dispatch [:set-current-panel :clock]}
-            {:dispatch [:error :login "Incorrect login details"]}))))
+   (let [db (:db cofx)]
+     {:dispatch [:set-current-panel :clock]
+      :http-xhrio (u/post-request "/api/v1/user/login"
+                                  {:username username :password password}
+                                  [:login-success]
+                                  [:login-failure])})))
 
+(rf/reg-event-fx
+ :login-success
+ [check-spec-interceptor
+  rf/trim-v]
+ (fn [cofx _]
+   (let [db (:db cofx)]
+     {:db (assoc db :error nil)
+      :dispatch [:set-logged-in true]
+      :http-xhrio (u/post-request "/api/v1/time/sync"
+                                  {:times (:study-log db)}
+                                  [:time-sync-success]
+                                  [:time-sync-failure])})))
+
+(rf/reg-event-fx
+ :login-failure
+ [check-spec-interceptor
+  rf/trim-v]
+ (fn [cofx [{:keys [response]}]]
+   {:dispatch [:error :login-failure (:message response)]}))
+
+(rf/reg-event-db
+ :time-sync-success
+ [check-spec-interceptor
+  rf/trim-v]
+ (fn [db [response]]
+   (let [times (:data response)]
+     (assoc db :study-log times
+               :error nil))))
+
+(rf/reg-event-fx
+ :time-sync-failure
+ [check-spec-interceptor
+  rf/trim-v]
+ (fn [cofx [{:keys [response]}]]
+   {:dispatch [:error :get-times-failure (:message response)]}))
+
+;; Todo: look into possible race condition on login event when setting error
 (rf/reg-event-db
  :error
  [check-spec-interceptor
   rf/trim-v]
  (fn [db details]
+   (println (str details))
    (assoc db :error details)))
+
+(rf/reg-event-db
+ :set-logged-in
+ [check-spec-interceptor
+  rf/trim-v]
+ (fn [db [value & _]]
+   (assoc db :logged-in? value)))
+
+(rf/reg-event-fx
+ :register
+ [check-spec-interceptor
+  rf/trim-v]
+ (fn [cofx [username password]]
+   (let [db (:db cofx)]
+     {:dispatch [:set-current-panel :clock]
+      :http-xhrio (u/post-request "/api/v1/user/register"
+                                  {:username username :password password}
+                                  [:login-success]
+                                  [:login-failure])})))
+
+(rf/reg-event-fx
+ :logout
+ [check-spec-interceptor
+  rf/trim-v]
+ (fn [cofx _]
+   {:dispatch [:initialize-db]
+    :http-xhrio (u/get-request "/api/v1/user/logout"
+                               {}
+                               [:none]
+                               [:none])}))
+
+(rf/reg-event-db
+ :none
+ [check-spec-interceptor
+  rf/trim-v]
+ (fn [db _]
+   db))

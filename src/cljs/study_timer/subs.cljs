@@ -32,17 +32,3 @@
  :error
  (fn [db]
    (:error db)))
-
-(reg-sub
- :login-error
- :<- [:error]
- (fn [[panel message] _]
-   (when (= :login panel)
-     message)))
-
-(reg-sub
- :clock-error
- :<- [:error]
- (fn [[panel message] _]
-   (when (= :clock panel)
-     message)))

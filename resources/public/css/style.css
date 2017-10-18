@@ -47,8 +47,7 @@ button {
     width: 300px;
 }
 
-#username,
-#password {
+.login-form .input {
     background-color: rgb(41,43,46);
     border: 2px solid rgb(102,136,173);
     border-radius: 5px;
@@ -66,6 +65,22 @@ button {
     transform: translate(-50%,0);
 }
 
+.error-flash {
+    color: black;
+    background: rgb(224, 80, 80);
+    box-shadow: 0 0 5px black;
+    left: 0;
+    line-height: 2.5;
+    overflow: hidden;
+    right: 0;
+    text-align: center;
+    top: 0;
+    position: absolute;
+    z-index: 101;
+    -webkit-box-shadow: 0 0 5px black;
+    -moz-box-shadow: 0 0 5px black;
+}
+
 .error {
-    color: rgb(231, 75, 75);
+    color: rgb(215, 33, 34);
 }

@@ -18,14 +18,23 @@
 
 (s/def ::panel
   #{:login    ;; The login page
+    :register ;; The registration page
     :clock})  ;; The clock page
+
+(s/def ::error-type
+  #{:login-failure
+    :get-times-failure
+    :add-time-failure
+    :register-password-mismatch})
 
 (s/def ::current-panel ::panel)
 
 (s/def ::error
   (s/or :nil nil?
-        :details (s/cat :panel ::panel
+        :details (s/cat :type ::error-type
                         :message string?)))
+
+(s/def ::logged-in? boolean?)
 
 (s/def ::db (s/keys :req-un [::clock-state
                              ::time
@@ -33,7 +42,8 @@
                              ::break-length
                              ::study-log
                              ::current-panel
-                             ::error]))
+                             ::error
+                             ::logged-in?]))
 
 (def default-db
   {:clock-state :stopped
@@ -42,4 +52,5 @@
    :break-length (* 5 60 1000) ;; 5 mins
    :study-log []
    :current-panel :login
-   :error nil})
+   :error nil
+   :logged-in? false})
