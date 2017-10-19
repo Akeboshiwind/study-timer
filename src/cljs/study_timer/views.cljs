@@ -48,7 +48,7 @@
    :options {:scales {:yAxes [{:ticks {:callback (fn [tick, _, _] (u/->clock-string tick))}}]}}})
 
 (defn line-graph
-  [data]
+  [data on-click]
   (let [id (str (random-uuid))
         chart (atom nil)]
     (r/create-class
@@ -59,7 +59,8 @@
                              (let [canvas (.getElementById js/document id)
                                    ctx (.getContext canvas "2d")]
                                (set! (.-height canvas) 162)
-                               (reset! chart (js/Chart. ctx (clj->js (line-chart-data data))))))
+                               (reset! chart (js/Chart. ctx (clj->js (line-chart-data data))))
+                               (set! (.-onclick canvas) (on-click chart))))
       :component-did-update (fn [comp new-args]
                               (let [[_ data] (r/argv comp)
                                     chart @chart
@@ -83,9 +84,18 @@
 
 (defn study-log-chart
   [logs]
-  [line-graph [{:label "Study data"
-                :data logs
-                :borderColor ["rgba(102,136,173,1)"]}]])
+  [line-graph
+   [{:label "Study data"
+     :data logs
+     :borderColor ["rgba(102,136,173,1)"]}]
+   (fn [chart]
+     (fn [e]
+       (try
+         (let [chart @chart
+               point (first (.getElementsAtEvent chart e))
+               index (.-_index point)]
+           (dispatch [:remove-time index]))
+         (catch js/TypeError e nil))))])
 
 (defn login-failure
   [message]

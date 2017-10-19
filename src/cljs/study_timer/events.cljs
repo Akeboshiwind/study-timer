@@ -192,3 +192,26 @@
   rf/trim-v]
  (fn [db _]
    db))
+
+(rf/reg-event-fx
+ :remove-time
+ [check-spec-interceptor
+  rf/trim-v]
+ (fn [cofx [index]]
+   (let [db (:db cofx)
+         study-log (:study-log db)]
+     {:db (assoc db :study-log (u/drop-nth index study-log))
+      :http-xhrio (u/post-request "/api/v1/time/delete"
+                                  {:index index}
+                                  [:none]
+                                  [:remove-time-failure index (nth study-log index)])})))
+
+(rf/reg-event-fx
+ :remove-time-failure
+ [check-spec-interceptor
+  rf/trim-v]
+ (fn [cofx [index value {:keys [response]}]]
+   (let [db (:db cofx)
+         study-log (:study-log db)]
+     {:db (assoc db :study-log (u/insert-nth index value study-log))
+      :dispatch [:error :remove-time-failure (:message response)]})))

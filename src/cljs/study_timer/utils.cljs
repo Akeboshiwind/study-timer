@@ -46,3 +46,12 @@
    :response-format (ajax/json-response-format {:keywords? true})
    :on-success      on-success
    :on-failure      on-failure})
+
+(defn drop-nth
+  [n coll]
+  (keep-indexed #(if (not= %1 n) %2) coll))
+
+(defn insert-nth
+  [index value coll]
+  (let [[before after] (split-at index coll)]
+    (concat before [value] after)))

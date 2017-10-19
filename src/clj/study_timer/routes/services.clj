@@ -88,6 +88,16 @@
         (ok {:ok true}))
       (unauthorized {:ok false :message "Not logged in"}))))
 
+(defn delete-time
+  [index request]
+  (let [session (:session request)]
+    (if-let [current-user (:identity session)]
+      (if (zero? (db/delete-time! {:user-id current-user
+                                   :index index}))
+        (bad-request {:ok false :message "Index out of range"})
+        (ok {:ok true}))
+      (unauthorized {:ok false :message "Not logged in"}))))
+
 (defn get-times
   [request]
   (let [session (:session request)]
@@ -153,9 +163,15 @@
                           :summary "Add a time"
                           (add-time time request))
 
+                    (POST "/delete" request
+                          :body-params [index :- Long]
+                          :summary "Delete the time at the given index"
+                          (delete-time index request))
+
                     (GET "/get" request
                           :summary "Get all the times for the current user, in order"
                           (get-times request))
+
                     (POST "/sync" request
                           :body-params [times :- [Long]]
                           :summary "Add the given times to the database and return a list of all the times for the user."

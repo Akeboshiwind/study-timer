@@ -42,3 +42,15 @@ select `time`
 from `time`
 where user_id = :user-id
 order by id
+
+-- :name delete-time! :! :n
+-- :doc delete the time at the given index
+delete t.*
+from `time` as t
+inner join (select id
+              from `time`
+              where user_id = :user-id
+              order by id
+              limit 1
+              offset :index) as t2
+        on t.id = t2.id

@@ -25,7 +25,8 @@
   #{:login-failure
     :get-times-failure
     :add-time-failure
-    :register-password-mismatch})
+    :register-password-mismatch
+    :remove-time-failure})
 
 (s/def ::current-panel ::panel)
 
