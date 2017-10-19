@@ -14,6 +14,8 @@
 
 (s/def ::break-length int?)
 
+(s/def ::min-study-length int?)
+
 (s/def ::study-log (s/coll-of int?))
 
 (s/def ::panel
@@ -41,6 +43,7 @@
                              ::time
                              ::display-time
                              ::break-length
+                             ::min-study-length
                              ::study-log
                              ::current-panel
                              ::error
@@ -51,6 +54,7 @@
    :time (u/now)
    :display-time 0
    :break-length (* 5 60 1000) ;; 5 mins
+   :min-study-length (* 30 1000) ;; 30 secs
    :study-log []
    :current-panel :login
    :error nil

@@ -50,13 +50,15 @@
   rf/trim-v]
  (fn [cofx [time]]
    (let [db (:db cofx)
-         log (:study-log db)]
-     (merge {:db (assoc db :study-log (conj log time))}
-            (when (:logged-in? db)
-              {:http-xhrio (u/post-request "/api/v1/time/add"
-                                           {:time time}
-                                           [:add-time-success]
-                                           [:add-time-failure])})))))
+         log (:study-log db)
+         min-study-length (:min-study-length db)]
+     (when (> time min-study-length)
+       (merge {:db (assoc db :study-log (conj log time))}
+              (when (:logged-in? db)
+                {:http-xhrio (u/post-request "/api/v1/time/add"
+                                             {:time time}
+                                             [:add-time-success]
+                                             [:add-time-failure])}))))))
 
 (rf/reg-event-db
  :add-time-success
@@ -153,7 +155,6 @@
  [check-spec-interceptor
   rf/trim-v]
  (fn [db details]
-   (println (str details))
    (assoc db :error details)))
 
 (rf/reg-event-db

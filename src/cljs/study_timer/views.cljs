@@ -88,6 +88,8 @@
    [{:label "Study data"
      :data logs
      :borderColor ["rgba(102,136,173,1)"]}]
+   (fn [_] (fn [_]))
+   #_
    (fn [chart]
      (fn [e]
        (try
