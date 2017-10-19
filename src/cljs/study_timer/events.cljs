@@ -5,13 +5,14 @@
             [study-timer.utils :as u]
             [study-timer.effects :as e]
             [day8.re-frame.http-fx]
-            [ajax.core :as ajax]))
+            [ajax.core :as ajax]
+            [expound.alpha :as expound]))
 
 (defn check-and-throw
   "Throws an exception if `db` doesn't match the Spec `a-spec`."
   [a-spec db]
   (when-not (s/valid? a-spec db)
-    (throw (ex-info (str "spec check failed: " (s/explain-str a-spec db)) {}))))
+    (throw (ex-info (str "spec check failed: " (expound/expound-str a-spec db)) {}))))
 
 (def check-spec-interceptor (rf/after (partial check-and-throw :study-timer.db/db)))
 

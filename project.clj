@@ -38,7 +38,8 @@
                  [selmer "1.11.1"]
                  [com.andrewmcveigh/cljs-time "0.5.0"]
                  [cljsjs/chartjs "2.6.0-0"]
-                 [day8.re-frame/http-fx "0.1.4"]]
+                 [day8.re-frame/http-fx "0.1.4"]
+                 [expound "0.3.1"]]
 
   :min-lein-version "2.0.0"
 
