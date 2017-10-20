@@ -3,7 +3,6 @@
             [cljs-time.core :as t]
             [cljs-time.coerce :as t.coerce]
             [cljs-time.format :as t.format]
-            [cljs.core.async.impl.dispatch :as dispatch]
             [reagent.core :as r]
             [cljsjs.chartjs]
             [study-timer.utils :as u]))
@@ -65,7 +64,7 @@
                               (let [[_ data] (r/argv comp)
                                     chart @chart
                                     chart-data (.-data chart)
-                                    datasets (.-datasets chart-data)]
+                                    datasets (aget chart-data "datasets")]
                                 (set! (.-labels chart-data)
                                       (-> data
                                           (first)

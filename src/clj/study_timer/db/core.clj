@@ -9,8 +9,20 @@
             BatchUpdateException
             PreparedStatement]))
 
+(defn make-database-url
+  [url port name user pass]
+  (str "mysql://" url
+       ":" port
+       "/" name
+       "?user=" user
+       "&password=" pass))
+
 (defstate ^:dynamic *db*
-           :start (conman/connect! {:jdbc-url (env :database-url)})
-           :stop (conman/disconnect! *db*))
+  :start (conman/connect! {:jdbc-url (make-database-url (env :db-url)
+                                                        (env :db-port)
+                                                        (env :db-name)
+                                                        (env :db-user)
+                                                        (env :db-pass))})
+  :stop (conman/disconnect! *db*))
 
 (conman/bind-connection *db* "sql/queries.sql")
