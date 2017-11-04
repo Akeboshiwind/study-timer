@@ -46,18 +46,27 @@
     (log/info component "started"))
   (.addShutdownHook (Runtime/getRuntime) (Thread. stop-app)))
 
+(defn make-database-url
+  [{:keys [db-url db-port db-name db-user db-pass]}]
+  (str "mysql://" db-url
+       ":" db-port
+       "/" db-name
+       "?user=" db-user
+       "&password=" db-pass))
+
 (defn -main [& args]
   (cond
     (some #{"init"} args)
     (do
       (mount/start #'study-timer.config/env)
-      (migrations/init (select-keys env [:database-url :init-script]))
+      (migrations/init (merge
+                        (select-keys env [:init-script])
+                        {:database-url (make-database-url env)}))
       (System/exit 0))
     (some #{"migrate" "rollback"} args)
     (do
       (mount/start #'study-timer.config/env)
-      (migrations/migrate args (select-keys env [:database-url]))
+      (migrations/migrate args {:database-url (make-database-url env)})
       (System/exit 0))
     :else
-    (start-app args))
-  )
+    (start-app args)))

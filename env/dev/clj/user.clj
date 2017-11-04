@@ -15,10 +15,16 @@
   (stop)
   (start))
 
+(defn make-database-url
+  [{:keys [db-url db-port db-name db-user db-pass]}]
+  (str "mysql://" db-url
+       ":" db-port
+       "/" db-name
+       "?user=" db-user
+       "&password=" db-pass))
+
 (defn migrate []
-  (migrations/migrate ["migrate"] (select-keys env [:database-url])))
+  (migrations/migrate ["migrate"] {:database-url (make-database-url env)}))
 
 (defn rollback []
-  (migrations/migrate ["rollback"] (select-keys env [:database-url])))
-
-
+  (migrations/migrate ["rollback"] {:database-url (make-database-url env)}))
