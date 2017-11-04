@@ -9,14 +9,25 @@
             [study-timer.utils :refer :all]
             [buddy.hashers :as h]
             [clojure.tools.logging :as log]
-            [conman.core :as conman]))
+            [conman.core :as conman]
+            [study-timer.middleware :refer [token]]
+            [clj-time.core :refer [now]]))
 
 (defn access-error [_ _]
-  (unauthorized {:error "unauthorized"}))
+  (unauthorized {:ok false :message "Unauthorized"}))
 
 (defn wrap-restricted [handler rule]
   (restrict handler {:handler  rule
                      :on-error access-error}))
+
+(defn user-exists?
+  [request]
+  (if-let [current-user (get-in request [:identity :user])]
+    (boolean (db/get-user {:id current-user}))
+    false))
+
+(def authed?
+  {:and [authenticated? user-exists?]})
 
 (defmethod restructure-param :auth-rules
   [_ rule acc]
@@ -27,21 +38,22 @@
   (update-in acc [:letks] into [binding `(:identity ~'+compojure-api-request+)]))
 
 (defn login
-  [username password request]
+  [req username password]
   (let [user (db/get-user-by-username {:username username})
-        session (:session request)]
+        session (:session req)]
     (if (h/check password (:hash user))
-      (let [updated-session (assoc session :identity (:id user))]
-        (-> (ok {:ok true})
-            (assoc :session updated-session)))
+      (let [user-id (:id user)]
+        (db/set-last-login-date! {:user-id user-id
+                                  :last-login-date (now)})
+        (ok {:ok true
+             :data {:token (token user-id)}}))
       (unauthorized {:ok false :message "Incorrect credentials"}))))
 
-(defn logout
-  [request]
-  (let [session (:session request)
-        updated-session (dissoc session :identity)]
-    (-> (ok {:ok true})
-        (assoc :session updated-session))))
+(defn refresh-token
+  [req]
+  (let [user-id (get-in req [:identity :user])]
+    (ok {:ok true
+         :data {:token (token user-id)}})))
 
 (defn register-user
   "Registers a user in the database
@@ -51,79 +63,66 @@
   [username password]
   (when (not (db/get-user-by-username {:username username}))
     (-> {:username username
-         :hash (h/derive password)}
+         :hash (h/derive password)
+         :last-login-date (now)}
         (db/create-user!)
         (:generated_key))))
 
 (defn register
-  [username password request]
+  [req username password]
   (if (>= (count username) 3)
     (if-let [user-id (register-user username password)]
-      (let [session (:session request)
-            updated-session (assoc session :identity user-id)]
-        (-> (ok {:ok true})
-            (assoc :session updated-session)))
+      (ok {:ok true
+           :data {:token (token user-id)}})
       (bad-request {:ok false :message "Username already exists"}))
     (bad-request {:ok false :message "Username must be at least 3 characters long"})))
 
 (defn unregister
-  [username request]
-  (let [session (:session request)
-        current-user (:identity session)
+  [req username]
+  (let [current-user (get-in req [:identity :user])
         requested-user (db/get-user-by-username {:username username})]
     (if (= current-user (:id requested-user))
-      (let [updated-session (dissoc session :identity)]
+      (do
         (db/delete-user! {:id current-user})
-        (-> (ok {:ok true})
-            (assoc :session updated-session)))
-      (unauthorized {:ok false :message "Not logged in"}))))
+        (ok {:ok true}))
+      (unauthorized {:ok false :message "Can only unregister yourself."}))))
 
 (defn add-time
-  [time request]
-  (let [session (:session request)]
-    (if-let [current-user (:identity session)]
-      (do
-        (db/add-time! {:user-id current-user
-                       :time time})
-        (ok {:ok true}))
-      (unauthorized {:ok false :message "Not logged in"}))))
+  [req time]
+  (let [current-user (get-in req [:identity :user])]
+    (db/add-time! {:user-id current-user
+                   :time time})
+    (ok {:ok true})))
 
 (defn delete-time
-  [index request]
-  (let [session (:session request)]
-    (if-let [current-user (:identity session)]
-      (if (zero? (db/delete-time! {:user-id current-user
-                                   :index index}))
-        (bad-request {:ok false :message "Index out of range"})
-        (ok {:ok true}))
-      (unauthorized {:ok false :message "Not logged in"}))))
+  [req index]
+  (let [current-user (get-in req [:identity :user])]
+    (if (zero? (db/delete-time! {:user-id current-user
+                                 :index index}))
+      (bad-request {:ok false :message "Index out of range"})
+      (ok {:ok true}))))
 
 (defn get-times
-  [request]
-  (let [session (:session request)]
-    (if-let [current-user (:identity session)]
-      (->> (db/get-times {:user-id current-user})
-           (map :time)
-           (assoc {:ok true} :data)
-           (ok))
-      (unauthorized {:ok false :message "Not logged in"}))))
+  [req]
+  (let [current-user (get-in req [:identity :user])]
+    (->> (db/get-times {:user-id current-user})
+         (map :time)
+         (assoc {:ok true} :data)
+         (ok))))
 
 (defn sync-times
-  [times request]
-  (let [session (:session request)]
-    (if-let [current-user (:identity session)]
-      (do
-        (conman/with-transaction [db/*db*]
-          (doseq [t times]
-            (db/add-time! {:user-id current-user
-                           :time t}))
-          (get-times request)))
-      (unauthorized {:ok false :message "Not logged in"}))))
+  [req times]
+  (let [current-user (get-in req [:identity :user])]
+    (conman/with-transaction [db/*db*]
+      (doseq [t times]
+        (db/add-time! {:user-id current-user
+                       :time t}))
+      (get-times req))))
 
 (defmacro wrap-log
-  [request & body]
+  [req & body]
   `(do
-     (log/info (str "\n\nRequest:\n" ~request "\n"))
+     (log/info (str "\n\nRequest:\n" ~req "\n"))
      (let [resp# (do ~@body)]
        (log/info (str "Response:\n" resp# "\n"))
        resp#)))
@@ -134,45 +133,54 @@
              :data {:info {:version "1.0.0"
                            :title "Sample API"
                            :description "Sample Services"}}}}
+
   (context "/api/v1" []
-           (context "/user" []
-                    (POST "/login" request
+           (context "/auth" []
+                    (POST "/login" req
                           :body-params [username :- String,
                                         password :- String]
-                          :summary "Do the login"
-                          (login username password request))
+                          :summary "If the `username` and `password` are valid, then issue a JWE token."
+                          (login req username password))
 
-                    (GET "/logout" request
-                          :summary "Logout the current user"
-                          (logout request))
+                    (GET "/refresh" req
+                         :auth-rules authed?
+                         :header-params [authorization :- String]
+                         :summary "Refresh the given JWT if it hasn't expiered."
+                         (refresh-token req)))
 
-                    (POST "/register" request
+           (context "/user" []
+                    (POST "/register" req
                           :body-params [username :- String,
                                         password :- String]
                           :summary "Register a new user, username has to be unique"
-                          (register username password request))
+                          (register req username password))
 
-                    (POST "/unregister" request
+                    (POST "/unregister" req
+                          :auth-rules authed?
+                          :header-params [authorization :- String]
                           :body-params [username :- String]
                           :summary "Deletes an existing user"
-                          (unregister username request)))
+                          (unregister req username)))
 
-           (context "/time" []
-                    (POST "/add" request
-                          :body-params [time :- Long]
-                          :summary "Add a time"
-                          (add-time time request))
+           (context "" []
+                    :auth-rules authed?
+                    :header-params [authorization :- String]
+                    (context "/time" []
+                             (POST "/add" req
+                                   :body-params [time :- Long]
+                                   :summary "Add a time"
+                                   (add-time req time))
 
-                    (POST "/delete" request
-                          :body-params [index :- Long]
-                          :summary "Delete the time at the given index"
-                          (delete-time index request))
+                             (POST "/delete" req
+                                   :body-params [index :- Long]
+                                   :summary "Delete the time at the given index"
+                                   (delete-time req index))
 
-                    (GET "/get" request
-                          :summary "Get all the times for the current user, in order"
-                          (get-times request))
+                             (GET "/get" req
+                                  :summary "Get all the times for the current user, in order"
+                                  (get-times req))
 
-                    (POST "/sync" request
-                          :body-params [times :- [Long]]
-                          :summary "Add the given times to the database and return a list of all the times for the user."
-                          (sync-times times request)))))
+                             (POST "/sync" req
+                                   :body-params [times :- [Long]]
+                                   :summary "Add the given times to the database and return a list of all the times for the user."
+                                   (sync-times req times))))))

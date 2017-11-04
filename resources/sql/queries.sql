@@ -2,8 +2,8 @@
 -- :doc creates a new user record
 insert
 into `user`
-(username, hash)
-values (:username, :hash)
+(username, hash, last_login_date)
+values (:username, :hash, :last-login-date)
 
 -- :name update-user! :! :n
 -- :doc update an existing user record
@@ -54,3 +54,8 @@ inner join (select id
               limit 1
               offset :index) as t2
         on t.id = t2.id
+
+-- :name set-last-login-date! :! :n
+update `user`
+set last_login_date = :last-login-date
+where id = :user-id

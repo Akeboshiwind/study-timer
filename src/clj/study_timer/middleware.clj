@@ -15,7 +15,10 @@
             [buddy.auth.middleware :refer [wrap-authentication wrap-authorization]]
             [buddy.auth.accessrules :refer [restrict]]
             [buddy.auth :refer [authenticated?]]
-            [buddy.auth.backends.session :refer [session-backend]])
+            [buddy.auth.backends.token :refer [jwe-backend]]
+            [buddy.sign.jwt :refer [encrypt]]
+            [buddy.core.nonce :refer [random-bytes]]
+            [clj-time.core :refer [plus now minutes]])
   (:import [javax.servlet ServletContext]
            [org.joda.time ReadableInstant]))
 
@@ -87,8 +90,23 @@
   (restrict handler {:handler authenticated?
                      :on-error on-error}))
 
+(def secret (random-bytes 32))
+
+(def token-options
+  {:alg :a256kw
+   :enc :a128gcm})
+
+(def token-backend
+  (jwe-backend {:secret secret
+                :options token-options}))
+
+(defn token [user-id]
+  (let [claims {:user user-id
+                :exp (plus (now) (minutes 60))}]
+    (encrypt claims secret token-options)))
+
 (defn wrap-auth [handler]
-  (let [backend (session-backend)]
+  (let [backend token-backend]
     (-> handler
         (wrap-authentication backend)
         (wrap-authorization backend))))
