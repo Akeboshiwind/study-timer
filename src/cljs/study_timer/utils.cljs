@@ -15,16 +15,24 @@
         custom-format (tf/formatter "HH:mm:ss")]
     (tf/unparse custom-format diff)))
 
+(defn dissoc-keys
+  [m keys]
+  (apply dissoc m keys))
+
 (defn post-request
-  [uri params on-success on-failure]
-  {:method          :post
-   :uri             uri
-   :params          params
-   :timeout         5000
-   :format          (ajax/json-request-format)
-   :response-format (ajax/json-response-format {:keywords? true})
-   :on-success      on-success
-   :on-failure      on-failure})
+  [{:keys [uri token params on-success on-failure] :as opts}]
+  (merge
+   (dissoc-keys opts [:token])
+   {:method          :post
+    :uri             uri
+    :params          params
+    :timeout         5000
+    :format          (ajax/json-request-format)
+    :response-format (ajax/json-response-format {:keywords? true})
+    :on-success      on-success
+    :on-failure      on-failure}
+   (when-not (nil? token)
+     {:headers {"Authorization" (str "Token " token)}})))
 
 (defn make-query-params
   [params]
@@ -39,13 +47,17 @@
                (rest params))))))
 
 (defn get-request
-  [uri params on-success on-failure]
-  {:method :get
-   :uri (str uri (make-query-params params))
-   :timeout 5000
-   :response-format (ajax/json-response-format {:keywords? true})
-   :on-success      on-success
-   :on-failure      on-failure})
+  [{:keys [uri token params on-success on-failure] :as opts}]
+  (merge
+   (dissoc-keys opts [:uri :token :params])
+   {:method :get
+    :uri (str uri (make-query-params params))
+    :timeout 5000
+    :response-format (ajax/json-response-format {:keywords? true})
+    :on-success      on-success
+    :on-failure      on-failure}
+   (when-not (nil? token)
+     {:headers {"Authorization" (str "Token " token)}})))
 
 (defn drop-nth
   [n coll]

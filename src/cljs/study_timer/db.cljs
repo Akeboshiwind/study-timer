@@ -28,7 +28,8 @@
     :get-times-failure
     :add-time-failure
     :register-password-mismatch
-    :remove-time-failure})
+    :remove-time-failure
+    :refresh-failure})
 
 (s/def ::current-panel ::panel)
 
@@ -37,7 +38,8 @@
         :details (s/cat :type ::error-type
                         :message string?)))
 
-(s/def ::logged-in? boolean?)
+(s/def ::token (s/or :nil? nil?
+                     :token string?))
 
 (s/def ::db (s/keys :req-un [::clock-state
                              ::time
@@ -47,7 +49,7 @@
                              ::study-log
                              ::current-panel
                              ::error
-                             ::logged-in?]))
+                             ::token]))
 
 (def default-db
   {:clock-state :stopped
@@ -58,4 +60,4 @@
    :study-log []
    :current-panel :login
    :error nil
-   :logged-in? false})
+   :token nil})

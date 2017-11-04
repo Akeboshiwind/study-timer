@@ -51,15 +51,17 @@
   rf/trim-v]
  (fn [cofx [time]]
    (let [db (:db cofx)
+         token (:token db)
          log (:study-log db)
          min-study-length (:min-study-length db)]
      (when (> time min-study-length)
        (merge {:db (assoc db :study-log (conj log time))}
-              (when (:logged-in? db)
-                {:http-xhrio (u/post-request "/api/v1/time/add"
-                                             {:time time}
-                                             [:add-time-success]
-                                             [:add-time-failure])}))))))
+              (when-not (nil? (:token db))
+                {:http-xhrio (u/post-request {:uri "/api/v1/time/add"
+                                              :token token
+                                              :params {:time time}
+                                              :on-success [:add-time-success]
+                                              :on-failure [:add-time-failure]})}))))))
 
 (rf/reg-event-db
  :add-time-success
@@ -107,25 +109,30 @@
  [check-spec-interceptor
   rf/trim-v]
  (fn [cofx [username password]]
-   (let [db (:db cofx)]
-     {:dispatch [:set-current-panel :clock]
-      :http-xhrio (u/post-request "/api/v1/user/login"
-                                  {:username username :password password}
-                                  [:login-success]
-                                  [:login-failure])})))
+   {:dispatch [:set-current-panel :clock]
+    :http-xhrio (u/post-request {:uri "/api/v1/auth/login"
+                                 :params {:username username
+                                          :password password}
+                                 :on-success [:login-success]
+                                 :on-failure [:login-failure]})}))
 
 (rf/reg-event-fx
  :login-success
  [check-spec-interceptor
   rf/trim-v]
- (fn [cofx _]
-   (let [db (:db cofx)]
-     {:db (assoc db :error nil)
-      :dispatch [:set-logged-in true]
-      :http-xhrio (u/post-request "/api/v1/time/sync"
-                                  {:times (:study-log db)}
-                                  [:time-sync-success]
-                                  [:time-sync-failure])})))
+ (fn [cofx [response]]
+   (let [db (:db cofx)
+         token (get-in response [:data :token])]
+     {:db (assoc db
+                 :error nil
+                 :token token)
+      :dispatch-later [{:ms (* 1000 60 55) ;; 55 mins
+                        :dispatch [:refresh-token]}]
+      :http-xhrio (u/post-request {:uri  "/api/v1/time/sync"
+                                   :token token
+                                   :params {:times (:study-log db)}
+                                   :on-success [:time-sync-success]
+                                   :on-failure [:time-sync-failure]})})))
 
 (rf/reg-event-fx
  :login-failure
@@ -133,6 +140,35 @@
   rf/trim-v]
  (fn [cofx [{:keys [response]}]]
    {:dispatch [:error :login-failure (:message response)]}))
+
+(rf/reg-event-fx
+ :refresh-token
+ [check-spec-interceptor
+  rf/trim-v]
+ (fn [cofx _]
+   (let [db (:db cofx)
+         token (:token db)]
+     {:http-xhrio (u/get-request {:uri "/api/v1/auth/refresh"
+                                  :token token
+                                  :on-success [:refresh-success]
+                                  :on-failure [:refresh-failure]})})))
+
+(rf/reg-event-fx
+ :refresh-success
+ [check-spec-interceptor
+  rf/trim-v]
+ (fn [cofx [response]]
+   (let [db (:db cofx)]
+     {:db (assoc db :token (get-in response [:data :token]))
+      :dispatch-later [{:ms (* 1000 60 55) ;; 55 mins
+                        :dispatch [:refresh-token]}]})))
+
+(rf/reg-event-fx
+ :refresh-failure
+ [check-spec-interceptor
+  rf/trim-v]
+ (fn [cofx [{:keys [response]}]]
+   {:dispatch [:error :refresh-failure (:message response)]}))
 
 (rf/reg-event-db
  :time-sync-success
@@ -159,34 +195,38 @@
    (assoc db :error details)))
 
 (rf/reg-event-db
- :set-logged-in
+ :set-token
  [check-spec-interceptor
   rf/trim-v]
  (fn [db [value & _]]
-   (assoc db :logged-in? value)))
+   (assoc db :token value)))
 
 (rf/reg-event-fx
  :register
  [check-spec-interceptor
   rf/trim-v]
  (fn [cofx [username password]]
-   (let [db (:db cofx)]
+   (let [db (:db cofx)
+         token (:token db)]
      {:dispatch [:set-current-panel :clock]
-      :http-xhrio (u/post-request "/api/v1/user/register"
-                                  {:username username :password password}
-                                  [:login-success]
-                                  [:login-failure])})))
+      :http-xhrio (u/post-request {:uri "/api/v1/user/register"
+                                   :token token
+                                   :params {:username username :password password}
+                                   :on-success [:login-success]
+                                   :on-failure [:login-failure]})})))
 
 (rf/reg-event-fx
  :logout
  [check-spec-interceptor
   rf/trim-v]
  (fn [cofx _]
-   {:dispatch [:initialize-db]
-    :http-xhrio (u/get-request "/api/v1/user/logout"
-                               {}
-                               [:none]
-                               [:none])}))
+   (let [db (:db cofx)
+         token (:token db)]
+     {:dispatch [:initialize-db]
+      :http-xhrio (u/get-request {:uri "/api/v1/user/logout"
+                                  :token token
+                                  :on-success [:set-token nil]
+                                  :on-failure [:none]})})))
 
 (rf/reg-event-db
  :none
@@ -201,12 +241,14 @@
   rf/trim-v]
  (fn [cofx [index]]
    (let [db (:db cofx)
+         token (:token db)
          study-log (:study-log db)]
      {:db (assoc db :study-log (u/drop-nth index study-log))
-      :http-xhrio (u/post-request "/api/v1/time/delete"
-                                  {:index index}
-                                  [:none]
-                                  [:remove-time-failure index (nth study-log index)])})))
+      :http-xhrio (u/post-request {:uri "/api/v1/time/delete"
+                                   :token token
+                                   :params {:index index}
+                                   :on-success [:none]
+                                   :on-failure [:remove-time-failure index (nth study-log index)]})})))
 
 (rf/reg-event-fx
  :remove-time-failure
