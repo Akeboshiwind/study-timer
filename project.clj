@@ -94,7 +94,8 @@
                                  [binaryage/devtools "0.9.7"]
                                  [com.cemerick/piggieback "0.2.2"]
                                  [doo "0.1.8"]
-                                 [figwheel-sidecar "0.5.14"]]
+                                 [figwheel-sidecar "0.5.14"]
+                                 [re-frisk "0.5.0"]]
                   :plugins      [[com.jakemccrary/lein-test-refresh "0.19.0"]
                                  [lein-doo "0.1.8"]
                                  [lein-figwheel "0.5.14"]
@@ -111,7 +112,8 @@
                       :output-dir "target/cljsbuild/public/js/out"
                       :source-map true
                       :optimizations :none
-                      :pretty-print true}}}}
+                      :pretty-print true
+                      :preloads [re-frisk.preload]}}}}
 
                   :doo {:build "test"}
                   :source-paths ["env/dev/clj"]
