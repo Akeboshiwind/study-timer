@@ -51,9 +51,12 @@
 
 (defn refresh-token
   [req]
-  (let [user-id (get-in req [:identity :user])]
-    (ok {:ok true
-         :data {:token (token user-id)}})))
+  (let [user-id (get-in req [:identity :user])
+        current-user (db/get-user {:id user-id})]
+    (if-not (nil? (:last_login_date current-user))
+      (ok {:ok true
+           :data {:token (token user-id)}})
+      (bad-request {:ok false :message "This user has logged out, please login again to re-enable refreshing of tokens"}))))
 
 (defn logout
   [req]
