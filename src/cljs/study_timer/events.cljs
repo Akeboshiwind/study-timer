@@ -225,7 +225,7 @@
      {:dispatch [:initialize-db]
       :http-xhrio (u/get-request {:uri "/api/v1/user/logout"
                                   :token token
-                                  :on-success [:set-token nil]
+                                  :on-success [:none]
                                   :on-failure [:none]})})))
 
 (rf/reg-event-db
