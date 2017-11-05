@@ -50,6 +50,9 @@
       (unauthorized {:ok false :message "Incorrect credentials"}))))
 
 (defn refresh-token
+  "Only allowed if `last_login_date` is not null.
+
+  This is so that if someone steals a token, they can't have infinite access."
   [req]
   (let [user-id (get-in req [:identity :user])
         current-user (db/get-user {:id user-id})]
