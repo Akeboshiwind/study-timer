@@ -59,3 +59,8 @@ inner join (select id
 update `user`
 set last_login_date = :last-login-date
 where id = :user-id
+
+-- :name logout! :! :n
+update `user`
+set last_login_date = null
+where id = :user-id

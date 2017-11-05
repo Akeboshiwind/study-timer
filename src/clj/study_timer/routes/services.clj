@@ -55,6 +55,12 @@
     (ok {:ok true
          :data {:token (token user-id)}})))
 
+(defn logout
+  [req]
+  (let [user-id (get-in req [:identity :user])]
+    (db/logout! {:user-id user-id})
+    (ok {:ok true})))
+
 (defn register-user
   "Registers a user in the database
 
@@ -160,7 +166,13 @@
                           :header-params [authorization :- String]
                           :body-params [username :- String]
                           :summary "Deletes an existing user"
-                          (unregister req username)))
+                          (unregister req username))
+
+                    (GET "/logout" req
+                          :auth-rules authed?
+                          :header-params [authorization :- String]
+                          :summary "Logout the user"
+                          (logout req)))
 
            (context "" []
                     :auth-rules authed?
