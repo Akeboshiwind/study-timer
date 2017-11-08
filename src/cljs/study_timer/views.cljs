@@ -9,9 +9,9 @@
 
 (defn dispatch-tick-event
   []
-  (dispatch [:tick]))
+  (dispatch [:tick])
 
-(defonce tick-timer (js/setInterval dispatch-tick-event 1000))
+ tick-timer (js/setInterval dispatch-tick-event 1000))
 
 (defn clock
   [clock]
@@ -143,71 +143,84 @@
 
 (defn login-panel
   []
-  [:div.login-form
-   [:input#username.input
-    {:placeholder "USERNAME"
-     :type "text"}]
-   [:input#password.input
-    {:placeholder "PASSWORD"
-     :type "password"
-     :on-key-press (fn [e]
-                     (when (= 13 (.-charCode e))
-                       (.. js/document
-                           (getElementById "login-button")
-                           (click))))}]
-   [:div#login-button.button
-    {:on-click (fn []
-                 (let [username (input-value "username")
-                       password (input-value "password")]
-                   (dispatch [:login username password])))}
-    "LOGIN"]
-   [:div
-    "OR"
-    [:div.button
-     {:on-click (fn []
-                  (dispatch [:set-current-panel :register]))}
-     "REGISTER"]]])
+  (let [error (subscribe [:error])]
+    (fn []
+      [:div.login-form
+       [error-display @error]
+       [:input#username.input
+        {:placeholder "USERNAME"
+         :type "text"}]
+       [:input#password.input
+        {:placeholder "PASSWORD"
+         :type "password"
+         :on-key-press (fn [e]
+                         (when (= 13 (.-charCode e))
+                           (.. js/document
+                               (getElementById "login-button")
+                               (click))))}]
+       [:div#login-button.button
+        {:on-click (fn []
+                     (let [username (input-value "username")
+                           password (input-value "password")]
+                       (dispatch [:login username password])))}
+        "LOGIN"]
+       [:div
+        "OR"
+        [:div.button
+         {:on-click (fn []
+                      (dispatch [:set-current-panel :register]))}
+         "REGISTER"]]])))
 
 (defn registration-panel
   []
   (let [error (subscribe [:error])]
-    [:div.login-form
-     [error-display @error]
-     [:input#username.input
-      {:placeholder "USERNAME"
-       :type "text"}]
-     [:input#password.input
-      {:placeholder "PASSWORD"
-       :type "password"}]
-     [:input#password2.input
-      {:placeholder "RE-ENTER PASSWORD"
-       :type "password"
-       :on-key-press (fn [e]
-                       (when (= 13 (.-charCode e))
-                         (.. js/document
-                             (getElementById "register-button")
-                             (click))))}]
-     [:div#register-button.button
-      {:on-click (fn []
-                   (let [username (input-value "username")
-                         password (input-value "password")
-                         password2 (input-value "password2")]
-                     (if (= password password2)
-                       (dispatch [:register username password])
-                       (dispatch [:error :register-password-mismatch "Passwords don't match"]))))}
-      "REGISTER"]
-     [:div
-      "OR"
-      [:div.button
-       {:on-click (fn []
-                    (dispatch [:set-current-panel :login]))}
-       "LOGIN"]]]))
+    (fn []
+      [:div.login-form
+       [error-display @error]
+       [:input#username.input
+        {:placeholder "USERNAME"
+         :type "text"}]
+       [:input#password.input
+        {:placeholder "PASSWORD"
+         :type "password"}]
+       [:input#password2.input
+        {:placeholder "RE-ENTER PASSWORD"
+         :type "password"
+         :on-key-press (fn [e]
+                         (when (= 13 (.-charCode e))
+                           (.. js/document
+                               (getElementById "register-button")
+                               (click))))}]
+       [:div#register-button.button
+        {:on-click (fn []
+                     (let [username (input-value "username")
+                           password (input-value "password")
+                           password2 (input-value "password2")]
+                       (if (= password password2)
+                         (dispatch [:register username password])
+                         (dispatch [:error :register-password-mismatch "Passwords don't match"]))))}
+        "REGISTER"]
+       [:div
+        "OR"
+        [:div.button
+         {:on-click (fn []
+                      (dispatch [:set-current-panel :login]))}
+         "LOGIN"]]])))
+
+(defn flash
+  []
+  (let [flash-type (subscribe [:flash-type])
+        flash (subscribe [:flash])]
+    (fn []
+      [:div.flash "hi"])))
 
 (defn main-panel
   []
   (let [current (subscribe [:current-panel])]
     (fn []
-      (condp = @current
-        :login [login-panel]
-        :register [registration-panel]
-        :clock [clock-panel]))))
+      [:div.content
+       [flash]
+       (condp = @current
+         :login [login-panel]
+         :register [registration-panel]
+         :clock [clock-panel])])))

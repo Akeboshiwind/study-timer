@@ -57,18 +57,12 @@
      (when (> time min-study-length)
        (merge {:db (assoc db :study-log (conj log time))}
               (when-not (nil? (:token db))
-                {:http-xhrio (u/post-request {:uri "/api/v1/time/add"
+                {:dispatch [:error nil]
+                 :http-xhrio (u/post-request {:uri "/api/v1/time/add"
                                               :token token
                                               :params {:time time}
-                                              :on-success [:add-time-success]
+                                              :on-success [:none]
                                               :on-failure [:add-time-failure]})}))))))
-
-(rf/reg-event-db
- :add-time-success
- [check-spec-interceptor
-  rf/trim-v]
- (fn [db [{:keys [response]}]]
-   (assoc db :error nil)))
 
 (rf/reg-event-fx
  :add-time-failure
@@ -101,7 +95,6 @@
   rf/trim-v]
  (fn [db [new-panel]]
    (assoc db :current-panel new-panel
-          :error nil
           :clock-state :stopped)))
 
 (rf/reg-event-fx
@@ -109,7 +102,8 @@
  [check-spec-interceptor
   rf/trim-v]
  (fn [cofx [username password]]
-   {:dispatch [:set-current-panel :clock]
+   {:dispatch-n [[:set-current-panel :clock]
+                 [:error nil]]
     :http-xhrio (u/post-request {:uri "/api/v1/auth/login"
                                  :params {:username username
                                           :password password}
@@ -124,7 +118,6 @@
    (let [db (:db cofx)
          token (get-in response [:data :token])]
      {:db (assoc db
-                 :error nil
                  :token token)
       :dispatch-later [{:ms (* 1000 60 55) ;; 55 mins
                         :dispatch [:refresh-token]}]
@@ -139,7 +132,8 @@
  [check-spec-interceptor
   rf/trim-v]
  (fn [cofx [{:keys [response]}]]
-   {:dispatch [:error :login-failure (:message response)]}))
+   {:dispatch-n [[:error :login-failure (:message response)]
+                 [:set-current-panel :login]]}))
 
 (rf/reg-event-fx
  :refresh-token
@@ -176,8 +170,7 @@
   rf/trim-v]
  (fn [db [response]]
    (let [times (:data response)]
-     (assoc db :study-log times
-               :error nil))))
+     (assoc db :study-log times))))
 
 (rf/reg-event-fx
  :time-sync-failure
@@ -208,12 +201,21 @@
  (fn [cofx [username password]]
    (let [db (:db cofx)
          token (:token db)]
-     {:dispatch [:set-current-panel :clock]
+     {:dispatch-n [[:set-current-panel :clock]
+                   [:error nil]]
       :http-xhrio (u/post-request {:uri "/api/v1/user/register"
                                    :token token
                                    :params {:username username :password password}
                                    :on-success [:login-success]
-                                   :on-failure [:login-failure]})})))
+                                   :on-failure [:register-failure]})})))
+
+(rf/reg-event-fx
+ :register-failure
+ [check-spec-interceptor
+  rf/trim-v]
+ (fn [cofx [{:keys [response]}]]
+   {:dispatch-n [[:error :login-failure (:message response)]
+                 [:set-current-panel :register]]}))
 
 (rf/reg-event-fx
  :logout
