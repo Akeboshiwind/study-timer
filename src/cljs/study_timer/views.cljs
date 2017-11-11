@@ -9,9 +9,9 @@
 
 (defn dispatch-tick-event
   []
-  (dispatch [:tick])
+  (dispatch [:tick]))
 
- tick-timer (js/setInterval dispatch-tick-event 1000))
+(defonce tick-timer (js/setInterval dispatch-tick-event 1000))
 
 (defn clock
   [clock]
