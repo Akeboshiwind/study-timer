@@ -185,7 +185,8 @@
  [check-spec-interceptor
   rf/trim-v]
  (fn [db details]
-   (assoc db :error details)))
+   (assoc db :error (when-not (nil? (first details))
+                      details))))
 
 (rf/reg-event-db
  :set-token
