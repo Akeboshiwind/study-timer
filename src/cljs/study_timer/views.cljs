@@ -126,7 +126,6 @@
         error (subscribe [:error])]
     (fn []
       [:div.panel
-       [error-display @error]
        [:div
         {:on-click (fn []
                      (dispatch [:logout]))}
@@ -146,7 +145,6 @@
   (let [error (subscribe [:error])]
     (fn []
       [:div.login-form
-       [error-display @error]
        [:input#username.input
         {:placeholder "USERNAME"
          :type "text"}]
@@ -176,7 +174,6 @@
   (let [error (subscribe [:error])]
     (fn []
       [:div.login-form
-       [error-display @error]
        [:input#username.input
         {:placeholder "USERNAME"
          :type "text"}]
@@ -209,10 +206,9 @@
 
 (defn flash
   []
-  (let [flash-type (subscribe [:flash-type])
-        flash (subscribe [:flash])]
+  (let [error (subscribe [:error])]
     (fn []
-      [:div.flash "hi"])))
+      [:div.flash @error])))
 
 (defn main-panel
   []
