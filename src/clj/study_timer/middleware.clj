@@ -18,7 +18,7 @@
             [buddy.auth.backends.token :refer [jwe-backend]]
             [buddy.sign.jwt :refer [encrypt]]
             [buddy.core.nonce :refer [random-bytes]]
-            [clj-time.core :refer [plus now minutes]])
+            [clj-time.core :refer [plus now months]])
   (:import [javax.servlet ServletContext]
            [org.joda.time ReadableInstant]))
 
@@ -102,7 +102,7 @@
 
 (defn token [user-id]
   (let [claims {:user user-id
-                :exp (plus (now) (minutes 60))}]
+                :exp (plus (now) (months 60))}]
     (encrypt claims secret token-options)))
 
 (defn wrap-auth [handler]
