@@ -1,7 +1,6 @@
-(defproject study-timer "0.1.0-SNAPSHOT"
+(defproject study-timer "0.1.0"
 
-  :description "FIXME: write description"
-  :url "http://example.com/FIXME"
+  :description "A webapp timer to help you study."
 
   :dependencies [[buddy "2.0.0"]
                  [clj-time "0.14.0"]
