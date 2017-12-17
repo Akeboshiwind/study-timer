@@ -102,7 +102,7 @@
 
 (defn token [user-id]
   (let [claims {:user user-id
-                :exp (plus (now) (months 60))}]
+                :exp (plus (now) (months 1))}]
     (encrypt claims secret token-options)))
 
 (defn wrap-auth [handler]
